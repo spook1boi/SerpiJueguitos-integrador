@@ -1,4 +1,5 @@
-const productSocket = io();
+const socket = io(); 
+
 const productsContainer = document.getElementById('product-container');
 const productForm = document.getElementById('product-form');
 const productTitleInput = document.getElementById('product-title');
@@ -15,48 +16,53 @@ const clearProductForm = () => {
     productCodeInput.value = '';
     productStockInput.value = '';
     productCategoryInput.value = '';
-}
+};
 
-productSocket.on('productList', products => {
-    console.log(products);
-    const productList = products.map(product => {
-        let thumbnailsList = "";
+const renderProducts = (products) => {
+    productsContainer.innerHTML = ''; 
 
-        if (product.thumbnails && Array.isArray(product.thumbnails)) {
-            thumbnailsList = product.thumbnails.map(thumbnail => `<li>${thumbnail}</li>`).join('');
-        }
+    products.forEach((product) => {
+        const productCard = document.createElement('div');
+        productCard.classList.add('product-card');
 
-        return `
-            <div class="product-card">
-                <img src="product-image.jpg" alt="Product Image" class="product-image">
-                <div class="product-details">
-                    <h5 class="product-title">${product.title}</h5>
-                    <p>Product ID: ${product._id}</p>
-                    <p>Description: ${product.description}</p>
-                    <p>Price: $${product.price}</p>
-                    <p>Image URLs:</p>
-                    <ul>${thumbnailsList}</ul>
-                    <p>Code: ${product.code}</p>
-                    <p>Stock: ${product.stock}</p>
-                    <p>Active: ${product.status}</p>
-                    <button class="delete-button" data-id="${product._id}">Delete</button>
-                </div>
-            </div>
-        `;
-    }).join(' ');
+        const productImage = document.createElement('img');
+        productImage.src = 'product-image.jpg';
+        productImage.alt = 'Product Image';
+        productImage.classList.add('product-image');
+        productCard.appendChild(productImage);
 
-    productsContainer.innerHTML = productList;
+        const productDetails = document.createElement('div');
+        productDetails.classList.add('product-details');
 
-    const deleteButtons = document.querySelectorAll('.delete-button');
-    deleteButtons.forEach((button) => {
-        button.addEventListener('click', (e) => {
-            const productId = e.target.getAttribute('data-id');
-            console.log(productId);
+        const productTitle = document.createElement('h5');
+        productTitle.classList.add('product-title');
+        productTitle.textContent = product.title;
+        productDetails.appendChild(productTitle);
 
-            productSocket.emit('deleteProduct', productId);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.classList.add('delete-button');
+        deleteButton.dataset.id = product._id;
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', () => {
+            const productId = product._id;
+            socket.emit('deleteProduct', productId);
         });
+        productDetails.appendChild(deleteButton);
+
+        productCard.appendChild(productDetails);
+        productsContainer.appendChild(productCard);
     });
+};
+
+socket.on('productList', (products) => {
+    renderProducts(products);
 });
+
+socket.on('productDeleted', () => {
+
+});
+
 
 productForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -64,12 +70,12 @@ productForm.addEventListener('submit', (e) => {
     const newProduct = {
         title: productTitleInput.value,
         description: productDescriptionInput.value,
-        price: productPriceInput.value,
+        price: parseFloat(productPriceInput.value),
         code: productCodeInput.value,
-        stock: productStockInput.value,
-        category: productCategoryInput.value
+        stock: parseInt(productStockInput.value),
+        category: productCategoryInput.value,
     };
 
-    productSocket.emit('addProduct', newProduct);
+    socket.emit('addProduct', newProduct);
     clearProductForm();
 });

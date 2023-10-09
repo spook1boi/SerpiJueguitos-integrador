@@ -1,24 +1,21 @@
-import { MessagesModel as MessageModel } from "../db/models/Messages.model.js";
+import mongoose from 'mongoose';
+import Message from '../db/models/Messages.model.js';
 
-export default class MessageManager {
+export async function createMessage(user, message) {
+  try {
+    const newMessage = new Message({ user, message });
+    const savedMessage = await newMessage.save();
+    return savedMessage;
+  } catch (error) {
+    throw error;
+  }
+}
 
-    addNewMessage = async ({ sender, text }) => {
-        try {
-            let message = await MessageModel.create({ sender, text });
-            return message;
-        } catch (error) {
-            console.log(error);
-            return error;
-        }
-    }
-
-    getAllMessages = async () => {
-        try {
-            const messages = await MessageModel.find();
-            return messages;
-        } catch (error) {
-            console.log(error);
-            return error;
-        }
-    }
+export async function getAllMessages() {
+  try {
+    const messages = await Message.find();
+    return messages;
+  } catch (error) {
+    throw error;
+  }
 }

@@ -1,8 +1,8 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
   user: {
-    type: String,
+    type: String, 
     required: true,
   },
   message: {
@@ -11,7 +11,7 @@ const messageSchema = new mongoose.Schema({
   },
   timestamp: {
     type: Date,
-    default: Date.now,
+    default: Date.now, 
   },
 });
 

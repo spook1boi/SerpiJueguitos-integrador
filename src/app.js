@@ -1,82 +1,51 @@
-import express from "express";
-import { __dirname as __dirnaname } from "./utils.js";
-import handlebars from "express-handlebars";
-import { Server } from "socket.io";
-import { router as ProductRouter, dbInstance as productDB, dbMethods as productDBMethods } from "../src/routes/product.router.js";
-import { router as CartRouter } from "../src/routes/cart.router.js";
-import MessageManager from "../src/Dao/MessagesManager.js";
-import "../src/db/db.config.js";
+import express from 'express';
+import { createServer } from 'http';
+import { Server as SocketIo } from 'socket.io';
+import mongoose from 'mongoose';
+import path from 'path';
+import productRouter from './routes/product.router.js';
+import cartRouter from './routes/cart.router.js';
+import { router as chatRouter, server as chatServer } from './routes/chat.router.js';
+import { getPublicDirname } from './utils.js';
 
-const msgInstance = new MessageManager();
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirnaname + "/public"));
-app.use('/api/products', ProductRouter);
-app.use('/api/carts', CartRouter);
-app.use('/', ViewsRouter);
+const server = createServer(app);
+const io = new SocketIo(server);
 
-app.engine("handlebars", handlebars.engine());
-app.set("views", __dirnaname + "/views");
-app.set("view engine", "handlebars");
-
-const PORT = 8080;
-
-const httpServer = app.listen(PORT, () => {
-    console.log("Servidor en funcionamiento en el puerto " + PORT);
+mongoose.connect('mongodb+srv://SpookyBoi:Aqr6Tt0QgOgQ0qTl@cluster0.lozpuyb.mongodb.net/ecommerce', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 });
 
-const socketServer = new Server(httpServer);
-let p = 0;
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.once('open', () => {
+  console.log('Successful connection to MongoDB.');
+});
 
-socketServer.on('connection', async (socket) => {
-    p += 1;
-    console.log(`${p} usuarios conectados`);
+app.set('view engine', 'handlebars');
 
-    const products = await productDBMethods.getProducts();
-    const msgs = await msgInstance.getMsgs();
+app.use(express.json());
 
-    socket.emit('productList', products);
-    socket.emit('messages', msgs);
+app.use(express.urlencoded({ extended: true }));
 
-    socket.on('newMsg', async obj => {
-        console.log("Nueva mensaje recibido");
-        try {
-            await msgInstance.newMsg(obj);
-            const updateMsg = await msgInstance.getMsgs();
-            socketServer.emit('messages', updateMsg);
-        } catch (error) {
-            return;
-        }
-    });
+app.use(express.static(getPublicDirname(import.meta.url)));
 
-    socket.on('addProduct', async product => {
-        console.log("Nuevo producto agregado");
-        try {
-            await productDBMethods.addProduct(product);
-            const updatedProducts = await productDBMethods.getProducts();
-            console.log(updatedProducts);
+app.use('/products', productRouter);
+app.use('/carts', cartRouter);
+app.use('/chat', chatRouter);
 
-            if (Array.isArray(updatedProducts)) socketServer.emit('productList', updatedProducts);
-        } catch (error) {
-            return;
-        }
-    });
+app.use((req, res, next) => {
+  res.status(404).send('Page not found');
+});
 
-    socket.on('deleteProduct', async (idProduct) => {
-        try {
-            console.log("Producto eliminado");
-            await productDBMethods.deleteProduct(idProduct);
-            const updatedProducts = await productDBMethods.getProducts();
-            if (Array.isArray(updatedProducts)) socketServer.emit('productList', updatedProducts);
-        } catch (error) {
-            return;
-        }
-    });
 
-    socket.on('disconnect', (msg) => {
-        p -= 1;
-        console.log(`${p} usuarios conectados`);
-        console.log(msg);
-    });
+io.on('connection', (socket) => {
+  console.log('A customer has connected to the chat.');
+  require('./public/js/chat')(socket, io);
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

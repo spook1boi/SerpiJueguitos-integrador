@@ -1,12 +1,15 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
-mongoose.connect('mongodb+srv://SpookyBoi:Aqr6Tt0QgOgQ0qTl@cluster0.lozpuyb.mongodb.net/', {
+const MONGODB_URI = 'mongodb+srv://SpookyBoi:Aqr6Tt0QgOgQ0qTl@cluster0.lozpuyb.mongodb.net/';
+
+mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
-mongoose.connection.on('connected', () => {
-  console.log('Connected to MongoDB');
-});
+const db = mongoose.connection;
 
-module.exports = mongoose;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.once('open', () => {
+  console.log('Successful connection to MongoDB.');
+});

@@ -1,52 +1,84 @@
-import { ProductsModel as ProductModel } from "../db/models/Products.model.js";
-import { CartModel as ShoppingCartModel } from "../db/models/Carts.model.js";
+import { Cart } from '../db/models/Carts.model.js';
+import { Product } from '../db/models/Products.model.js'; 
 
-export default class ShoppingCartManagerDB {
-
-    createShoppingCart = async (productIds) => {
-        let cart;
-        let product;
-
-        if (productIds?.length > 0) {
-            cart = await ShoppingCartModel.create({ products: [] });
-
-            for (const productId of productIds) {
-                product = await ProductModel.findById(productId);
-
-                if (product) {
-                    cart.products.push({ item: product._id, qty: product.qty });
-                }
-            }
-            await cart.save();
-        } else {
-            cart = await ShoppingCartModel.create({ products: [] });
-        }
-        return cart;
+class CartManagerDB {
+  async createCart() {
+    try {
+      const newCart = new Cart();
+      return await newCart.save();
+    } catch (error) {
+      throw new Error('Error creating cart in the database');
     }
+  }
 
-    getShoppingCarts = async () => {
-        const shoppingCarts = await ShoppingCartModel.find().populate("products.item");
-        return shoppingCarts;
+  async getCartById(cartId) {
+    try {
+      return await Cart.findById(cartId);
+    } catch (error) {
+      throw new Error('Error fetching cart from the database');
     }
+  }
 
-    getShoppingCartById = async (cartId) => {
-        let cart = await ShoppingCartModel.findById(cartId).populate("products.item");
-        return cart;
+  async addProductToCart(cartId, productId, quantity) {
+    try {
+      const cart = await Cart.findById(cartId);
+      const product = await Product.findById(productId);
+
+      if (!cart || !product) {
+        return null;
+      }
+
+      cart.products.push({ product: productId, quantity });
+      await cart.save();
+      return cart;
+    } catch (error) {
+      throw new Error('Error adding product to cart in the database');
     }
+  }
 
-    updateShoppingCart = async (cartId, productId) => {
-        let cart = await this.getShoppingCartById(cartId);
-        let product = await ProductModel.findById(productId);
+  async updateProductQuantity(cartId, productId, newQuantity) {
+    try {
+      const cart = await Cart.findById(cartId);
 
-        if (!product || !cart) {
-            throw Error("Cannot find cart ID");
-        }
+      if (!cart) {
+        return null;
+      }
 
-        cart.products.push({
-            item: product._id
-        });
+      const productIndex = cart.products.findIndex((item) => item.product == productId);
 
+      if (productIndex === -1) {
+        return null;
+      }
+
+      cart.products[productIndex].quantity = newQuantity;
+      await cart.save();
+      return cart;
+    } catch (error) {
+      throw new Error('Error updating product quantity in the database');
+    }
+  }
+
+  async removeProductFromCart(cartId, productId) {
+    try {
+      const cart = await Cart.findById(cartId);
+
+      if (!cart) {
+        return false;
+      }
+
+      const initialLength = cart.products.length;
+      cart.products = cart.products.filter((item) => item.product != productId);
+
+      if (cart.products.length < initialLength) {
         await cart.save();
-        return cart;
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      throw new Error('Error removing product from cart in the database');
     }
+  }
 }
+
+export default CartManagerDB;

@@ -1,51 +1,42 @@
-const socket = io();
-const productContainer = document.getElementById('product-container');
+const socket = io(); 
+
+
+const chatContainer = document.getElementById('chat-container');
 const messageForm = document.getElementById('message-form');
 const messageInput = document.getElementById('message-input');
 
-let userEmail;
-
-function validateEmail(email) {
-    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-    return emailRegex.test(email);
-}
-
-do {
-    userEmail = prompt("Please enter your email address:");
-
-    if (!validateEmail(userEmail)) {
-        alert("Invalid email address. Try again.");
-    }
-} while (!validateEmail(userEmail));
-
-const resetMessageInput = () => {
+const clearMessageForm = () => {
     messageInput.value = '';
-}
+};
 
-socket.on('newMessages', messages => {
-    const messagesList = messages.map(msg => {
-        return `
-            <div class="message-card">
-                <div class="message-header">
-                    <img src="avatar.jpg" alt="Avatar" class="avatar">
-                    <h5>${msg.user}</h5>
-                </div>
-                <p class="message-text">${msg.message}</p>
-            </div>
-        `;
-    }).join(' ');
+const renderMessage = (message) => {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message');
 
-    productContainer.innerHTML = messagesList;
+    const senderElement = document.createElement('span');
+    senderElement.classList.add('message-sender');
+    senderElement.textContent = message.user + ': ';
+    messageElement.appendChild(senderElement);
+
+    const textElement = document.createElement('span');
+    textElement.classList.add('message-text');
+    textElement.textContent = message.message;
+    messageElement.appendChild(textElement);
+
+    chatContainer.appendChild(messageElement);
+};
+
+socket.on('message', (message) => {
+    renderMessage(message);
 });
 
-messageForm.addEventListener('submit', event => {
-    event.preventDefault();
+messageForm.addEventListener('submit', (e) => {
+    e.preventDefault();
 
-    const newMessage = {
-        user: userEmail,
-        message: messageInput.value,
-    }
+    const user = 'User';
+    const messageText = messageInput.value;
 
-    socket.emit('sendMessage', newMessage);
-    resetMessageInput();
+    socket.emit('sendMessage', { user, message: messageText });
+
+    clearMessageForm();
 });
