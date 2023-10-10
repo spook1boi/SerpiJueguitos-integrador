@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
+router.post('/messages', async (req, res) => {
     const { user, message } = req.body;
     if (!user || !message) {
         res.status(400).json({ status: "error", error: "Missing body params" });

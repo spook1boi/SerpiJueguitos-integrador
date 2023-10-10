@@ -33,6 +33,38 @@ CartRouter.post("/carts", async (req, res) => {
     }
 });
 
+CartRouter.post("/carts", async (req, res) => {
+  try {
+      const { products } = req.body;
+
+      if (!Array.isArray(products)) {
+          return res.status(400).send('Invalid request: products must be an array');
+      }
+
+      const validProducts = [];
+
+      for (const product of products) {
+          const checkId = await pm.getProductById(product._id);
+          if (!checkId) {
+              return res.status(404).send(`Product with id ${product._id} not found`);
+          }
+          validProducts.push(checkId);
+      }
+
+      const newCart = await cm.createCart();
+
+      for (const product of validProducts) {
+          await cm.addProductInCart(newCart._id, product);
+      }
+
+      res.status(200).json(newCart);
+
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Internal Server Error');
+  }
+});
+
 CartRouter.get("/carts", async (req, res) => {
     try {
         const carts = await cm.getCarts();

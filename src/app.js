@@ -4,9 +4,9 @@ import handlebars from "express-handlebars"
 import {Server} from "socket.io"
 import "../src/db/db.config.js"
 
-// import ViewRouter from "./routes/view.routes.js"
 import ProductRouter from "../src/routes/product.router.js"
 import CartRouter from "../src/routes/cart.router.js"
+import MessagesRouter from "../src/routes/chat.router.js"
 import ProductManager from "./Dao/ProductManagerDB.js"
 
 const app =express()
@@ -15,7 +15,7 @@ const PORT=8080;
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 app.use(express.static(__dirname + "/public"))
-//handlebars
+
 app.engine("handlebars",handlebars.engine())
 app.set("views", __dirname+"/views")
 app.set("view engine","handlebars")
@@ -23,7 +23,7 @@ app.set("view engine","handlebars")
 //rutas
 app.use("/api",ProductRouter)
 app.use("/api",CartRouter)
-//app.use("/",ViewRouter)
+app.use("/api",MessagesRouter)
 
 
 const httpServer=app.listen(PORT,()=>{
@@ -64,10 +64,8 @@ socketServer.on("connection",async (socket)=>{
        })
    
        socket.on("mensaje", async (info) => {
-        // Guardar el mensaje utilizando el MessagesManager
         console.log(info)
         await messagesManager.createMessage(info);
-        // Emitir el mensaje a todos los clientes conectados
         socketServer.emit("chat", await messagesManager.getMessages());
       });
 

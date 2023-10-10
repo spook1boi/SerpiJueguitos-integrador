@@ -24,6 +24,16 @@ class CartManager {
         }
     }
 
+    async createCart() {
+        try {
+            const newCart = await cartModel.create({ products: [] });
+            return newCart;
+        } catch (err) {
+            console.error('Error al crear un nuevo carrito:', err.message);
+            return err;
+        }
+    }
+
     async addCart(products) {
         try {
             const cartData = { products: products || [] };
