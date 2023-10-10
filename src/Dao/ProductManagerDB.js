@@ -1,49 +1,46 @@
-import Product from '../db/models/Products.model.js';
+import { productsModel } from "../db/models/Products.model.js";
 
-class ProductManagerDB {
-  async createProduct(title, description, price, stock, thumbnails) {
-    try {
-      const newProduct = await Product.create({ title, description, price, stock, thumbnails });
-      return newProduct;
-    } catch (error) {
-      throw error;
+class ProductManager {
+    async getProducts() {
+        try {
+            return await productsModel.find().lean();
+        } catch (err) {
+            return err;
+        }
     }
-  }
 
-  async getAllProducts() {
-    try {
-      const products = await Product.find();
-      return products;
-    } catch (error) {
-      throw error;
+    async getProductById(id) {
+        try {
+            return await productsModel.findById(id);
+        } catch (err) {
+            return { error: err.message };
+        }
     }
-  }
 
-  async getProductById(productId) {
-    try {
-      const product = await Product.findById(productId);
-      return product;
-    } catch (error) {
-      throw error;
+    async addProduct(product) {
+        try {
+            await productsModel.create(product);
+            return await productsModel.findOne({ title: product.title });
+        } catch (err) {
+            return err;
+        }
     }
-  }
 
-  async updateProduct(productId, updatedData) {
-    try {
-      const updatedProduct = await Product.findByIdAndUpdate(productId, updatedData, { new: true });
-      return updatedProduct;
-    } catch (error) {
-      throw error;
+    async updateProduct(id, product) {
+        try {
+            return await productsModel.findByIdAndUpdate(id, { $set: product });
+        } catch (err) {
+            return err;
+        }
     }
-  }
 
-  async deleteProduct(productId) {
-    try {
-      await Product.findByIdAndDelete(productId);
-    } catch (error) {
-      throw error;
+    async deleteProduct(id) {
+        try {
+            return await productsModel.findByIdAndDelete(id);
+        } catch (err) {
+            return err;
+        }
     }
-  }
 }
 
-export default new ProductManagerDB();
+export default ProductManager;

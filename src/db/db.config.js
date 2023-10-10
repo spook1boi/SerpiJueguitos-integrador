@@ -1,15 +1,9 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
-const MONGODB_URI = 'mongodb+srv://SpookyBoi:Aqr6Tt0QgOgQ0qTl@cluster0.lozpuyb.mongodb.net/';
-
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-const db = mongoose.connection;
-
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', () => {
-  console.log('Successful connection to MongoDB.');
-});
+mongoose.connect('mongodb+srv://SpookyBoi:Aqr6Tt0QgOgQ0qTl@cluster0.lozpuyb.mongodb.net/ecommerce')
+.then(()=>{
+    console.log("Conectado a la base de datos")
+})
+.catch(error => {
+    console.error("Error al conectarse a la base de datos, error"+error)
+})

@@ -1,51 +1,74 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server as SocketIo } from 'socket.io';
-import mongoose from 'mongoose';
-import path from 'path';
-import productRouter from './routes/product.router.js';
-import cartRouter from './routes/cart.router.js';
-import { router as chatRouter, server as chatServer } from './routes/chat.router.js';
-import { getPublicDirname } from './utils.js';
+import express from "express"
+import __dirname from "./utils.js"
+import handlebars from "express-handlebars"
+import {Server} from "socket.io"
+import "../src/db/db.config.js"
 
-const app = express();
-const server = createServer(app);
-const io = new SocketIo(server);
+// import ViewRouter from "./routes/view.routes.js"
+import ProductRouter from "../src/routes/product.router.js"
+import CartRouter from "../src/routes/cart.router.js"
+import ProductManager from "./Dao/ProductManagerDB.js"
 
-mongoose.connect('mongodb+srv://SpookyBoi:Aqr6Tt0QgOgQ0qTl@cluster0.lozpuyb.mongodb.net/ecommerce', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+const app =express()
+const PORT=8080;
 
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', () => {
-  console.log('Successful connection to MongoDB.');
-});
+app.use(express.json())
+app.use(express.urlencoded({extended:true}))
+app.use(express.static(__dirname + "/public"))
+//handlebars
+app.engine("handlebars",handlebars.engine())
+app.set("views", __dirname+"/views")
+app.set("view engine","handlebars")
 
-app.set('view engine', 'handlebars');
-
-app.use(express.json());
-
-app.use(express.urlencoded({ extended: true }));
-
-app.use(express.static(getPublicDirname(import.meta.url)));
-
-app.use('/products', productRouter);
-app.use('/carts', cartRouter);
-app.use('/chat', chatRouter);
-
-app.use((req, res, next) => {
-  res.status(404).send('Page not found');
-});
+//rutas
+app.use("/api",ProductRouter)
+app.use("/api",CartRouter)
+//app.use("/",ViewRouter)
 
 
-io.on('connection', (socket) => {
-  console.log('A customer has connected to the chat.');
-  require('./public/js/chat')(socket, io);
-});
+const httpServer=app.listen(PORT,()=>{
+    console.log("server up ")
+})
 
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+ const socketServer = new  Server(httpServer)
+ const pmanager=new ProductManager()
+
+
+import MessagesManager from "./Dao/MessagesManager.js";
+const messagesManager = new MessagesManager();
+
+socketServer.on("connection",async (socket)=>{
+    console.log("cliente conectado con id:" ,socket.id)
+    const products = await pmanager.getProducts({});
+    socket.emit('productos', products);
+
+    socket.on('addProduct', async data => {
+        await pmanager.addProduct(data);
+        const updatedProducts = await pmanager.getProducts({}); // Obtener la lista actualizada de productos
+    socket.emit('productosupdated', updatedProducts);
+      });
+
+      socket.on("deleteProduct", async (id) => {
+        console.log("ID del producto a eliminar:", id);
+        const deletedProduct = await pmanager.deleteProduct(id);
+        const updatedProducts = await pmanager.getProducts({});
+        socketServer.emit("productosupdated", updatedProducts);
+      });
+
+      socket.on("nuevousuario",(usuario)=>{
+        console.log("usuario" ,usuario)
+        socket.broadcast.emit("broadcast",usuario)
+       })
+       socket.on("disconnect",()=>{
+           console.log(`Usuario con ID : ${socket.id} esta desconectado `)
+       })
+   
+       socket.on("mensaje", async (info) => {
+        // Guardar el mensaje utilizando el MessagesManager
+        console.log(info)
+        await messagesManager.createMessage(info);
+        // Emitir el mensaje a todos los clientes conectados
+        socketServer.emit("chat", await messagesManager.getMessages());
+      });
+
+})

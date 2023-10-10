@@ -1,84 +1,56 @@
-import { Cart } from '../db/models/Carts.model.js';
-import { Product } from '../db/models/Products.model.js'; 
+import { cartModel } from "../db/models/Carts.model.js";
+import ProductManager from "../Dao/ProductManagerDB.js";
 
-class CartManagerDB {
-  async createCart() {
-    try {
-      const newCart = new Cart();
-      return await newCart.save();
-    } catch (error) {
-      throw new Error('Error creating cart in the database');
+class CartManager {
+    constructor() {
+        this.productManager = new ProductManager();
     }
-  }
 
-  async getCartById(cartId) {
-    try {
-      return await Cart.findById(cartId);
-    } catch (error) {
-      throw new Error('Error fetching cart from the database');
+    async getCarts() {
+        try {
+            return await cartModel.find();
+        } catch (err) {
+            console.error('Error al obtener los carritos:', err.message);
+            return [];
+        }
     }
-  }
 
-  async addProductToCart(cartId, productId, quantity) {
-    try {
-      const cart = await Cart.findById(cartId);
-      const product = await Product.findById(productId);
-
-      if (!cart || !product) {
-        return null;
-      }
-
-      cart.products.push({ product: productId, quantity });
-      await cart.save();
-      return cart;
-    } catch (error) {
-      throw new Error('Error adding product to cart in the database');
+    async getCartById(cartId) {
+        try {
+            return await cartModel.findById(cartId);
+        } catch (err) {
+            console.error('Error al obtener el carrito por ID:', err.message);
+            return err;
+        }
     }
-  }
 
-  async updateProductQuantity(cartId, productId, newQuantity) {
-    try {
-      const cart = await Cart.findById(cartId);
-
-      if (!cart) {
-        return null;
-      }
-
-      const productIndex = cart.products.findIndex((item) => item.product == productId);
-
-      if (productIndex === -1) {
-        return null;
-      }
-
-      cart.products[productIndex].quantity = newQuantity;
-      await cart.save();
-      return cart;
-    } catch (error) {
-      throw new Error('Error updating product quantity in the database');
+    async addCart(products) {
+        try {
+            const cartData = { products: products || [] };
+            return await cartModel.create(cartData);
+        } catch (err) {
+            console.error('Error al crear el carrito:', err.message);
+            return err;
+        }
     }
-  }
 
-  async removeProductFromCart(cartId, productId) {
-    try {
-      const cart = await Cart.findById(cartId);
+    async addProductInCart(cartId, product) {
+        try {
+            const cart = await cartModel.findById(cartId);
+            const findProduct = cart.products.some((p) => p._id.toString() === product._id);
 
-      if (!cart) {
-        return false;
-      }
+            if (findProduct) {
+                await cartModel.updateOne({ _id: cartId, "products._id": product._id }, { $inc: { "products.$.quantity": product.quantity } });
+            } else {
+                await cartModel.updateOne({ _id: cartId }, { $push: { products: product } });
+            }
 
-      const initialLength = cart.products.length;
-      cart.products = cart.products.filter((item) => item.product != productId);
-
-      if (cart.products.length < initialLength) {
-        await cart.save();
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      throw new Error('Error removing product from cart in the database');
+            return await cartModel.findById(cartId);
+        } catch (err) {
+            console.error('Error al agregar el producto al carrito:', err.message);
+            return err;
+        }
     }
-  }
 }
 
-export default CartManagerDB;
+export default CartManager;

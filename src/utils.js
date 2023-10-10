@@ -1,10 +1,7 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import path from "path"
+import { fileURLToPath } from "url"
 
-function getPublicDirname(importMetaUrl) {
-  const __filename = fileURLToPath(importMetaUrl);
-  const __dirname = dirname(__filename);
-  return __dirname;
-}
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-export { getPublicDirname };
+export default __dirname

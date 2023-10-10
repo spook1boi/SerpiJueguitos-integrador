@@ -1,78 +1,86 @@
-import express from 'express';
-import CartManagerDB from '../dao/CartManagerDB.js'; 
+import { Router } from "express";
+import CartManager from "../Dao/CartManagerDB.js";
+import ProductManager from "../Dao/ProductManagerDB.js";
 
-const router = express.Router();
-const cartManager = new CartManagerDB();
+const CartRouter = Router();
+const cm = new CartManager();
+const pm = new ProductManager();
 
-router.post('/', async (req, res) => {
-  try {
-    const newCart = await cartManager.createCart();
-    res.status(201).json(newCart);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+CartRouter.post("/carts", async (req, res) => {
+    try {
+        const { products } = req.body;
 
-router.get('/:cartId', async (req, res) => {
-  const { cartId } = req.params;
+        if (!Array.isArray(products)) {
+            return res.status(400).send('Invalid request: products must be an array');
+        }
 
-  try {
-    const cart = await cartManager.getCartById(cartId);
-    if (cart) {
-      res.json(cart);
-    } else {
-      res.status(404).json({ error: 'Cart not found' });
+        const validProducts = [];
+
+        for (const product of products) {
+            const checkId = await pm.getProductById(product._id);
+            if (!checkId) {
+                return res.status(404).send(`Product with id ${product._id} not found`);
+            }
+            validProducts.push(checkId);
+        }
+
+        const cart = await cm.addCart(validProducts);
+        res.status(200).json(cart);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Internal Server Error');
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
-router.put('/:cartId/product/:productId', async (req, res) => {
-  const { cartId, productId } = req.params;
-  const { quantity } = req.body;
-
-  try {
-    const cart = await cartManager.addProductToCart(cartId, productId, quantity);
-    if (cart) {
-      res.json(cart);
-    } else {
-      res.status(404).json({ error: 'Cart or product not found' });
+CartRouter.get("/carts", async (req, res) => {
+    try {
+        const carts = await cm.getCarts();
+        res.json({ carts });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Internal Server Error');
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
-router.put('/:cartId/product/:productId/quantity', async (req, res) => {
-  const { cartId, productId } = req.params;
-  const { newQuantity } = req.body;
-
-  try {
-    const cart = await cartManager.updateProductQuantity(cartId, productId, newQuantity);
-    if (cart) {
-      res.json(cart);
-    } else {
-      res.status(404).json({ error: 'Cart or product not found' });
+CartRouter.get("/carts/:cid", async (req, res) => {
+    try {
+        const carritoFound = await cm.getCartById(req.params.cid);
+        if (!carritoFound) {
+            return res.status(404).json({ status: "error", message: `Cart with id ${req.params.cid} not found` });
+        }
+        res.json({ status: "success", carritoFound });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Internal Server Error');
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
-router.delete('/:cartId/product/:productId', async (req, res) => {
-  const { cartId, productId } = req.params;
+CartRouter.post("/carts/:cid/products/:pid", async (req, res) => {
+    const { cid, pid } = req.params;
+    const { quantity } = req.body;
 
-  try {
-    const removed = await cartManager.removeProductFromCart(cartId, productId);
-    if (removed) {
-      res.json({ message: 'Product removed from cart' });
-    } else {
-      res.status(404).json({ error: 'Cart or product not found' });
+    try {
+        const checkIdProduct = await pm.getProductById(pid);
+        if (!checkIdProduct) {
+            return res.status(404).json({ message: `Product with id ${pid} not found` });
+        }
+
+        const checkIdCart = await cm.getCartById(cid);
+        if (!checkIdCart) {
+            return res.status(404).json({ message: `Cart with id ${cid} not found` });
+        }
+
+        const result = await cm.addProductInCart(cid, { _id: pid, quantity });
+        console.log(result);
+        res.status(200).json({
+            message: `Product with id ${pid} added to Cart with id ${cid}`,
+            cart: result,
+        });
+    } catch (error) {
+        console.error("An error occurred:", error);
+        res.status(500).send({ message: "An error occurred" });
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
-export default router;
+export default CartRouter;
