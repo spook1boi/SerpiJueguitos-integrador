@@ -61,6 +61,40 @@ class CartManager {
             return err;
         }
     }
+
+    async updateCart(cartId, updatedData) {
+        try {
+            const updatedCart = await cartModel.findByIdAndUpdate(cartId, updatedData, { new: true });
+            return updatedCart;
+        } catch (err) {
+            console.error('Error al actualizar el carrito:', err.message);
+            return err;
+        }
+    }
+
+    async deleteCart(cartId) {
+        try {
+            const deletedCart = await cartModel.findByIdAndRemove(cartId);
+            return deletedCart;
+        } catch (err) {
+            console.error('Error al eliminar el carrito:', err.message);
+            return err;
+        }
+    }
+
+    async deleteProductFromCart(cartId, productId) {
+        try {
+            const result = await cartModel.updateOne(
+                { _id: cartId },
+                { $pull: { products: { _id: productId } } }
+            );
+
+            return result;
+        } catch (err) {
+            console.error('Error al eliminar el producto del carrito:', err.message);
+            return err;
+        }
+    }
 }
 
 export default CartManager;

@@ -19,8 +19,9 @@ ProductRouter.get("/products", async (req, res) => {
 });
 
 ProductRouter.get("/products/:pid", async (req, res) => {
+    const productId = req.params.pid;
     try {
-        const productfind = await pm.getProductById(req.params.pid);
+        const productfind = await pm.getProductById(productId);
         res.json({ status: "success", productfind });
     } catch (err) {
         console.error(err);
@@ -44,10 +45,10 @@ ProductRouter.post("/products", async (req, res) => {
 });
 
 ProductRouter.put("/products/:pid", async (req, res) => {
-    const pid = req.params.pid;
+    const productId = req.params.pid;
     const updateProducts = req.body;
     try {
-        const updatedproduct = await pm.updateProduct(pid, updateProducts);
+        const updatedproduct = await pm.updateProduct(productId, updateProducts);
         res.json({ status: "success", updatedproduct });
     } catch (err) {
         console.error(err);
@@ -55,10 +56,10 @@ ProductRouter.put("/products/:pid", async (req, res) => {
     }
 });
 
-ProductRouter.delete("/:id", async (req, res) => {
-    const id = req.params.id;
+ProductRouter.delete("/products/:pid", async (req, res) => {
+    const productId = req.params.pid;
     try {
-        const deleteproduct = await pm.deleteProduct(id);
+        const deleteproduct = await pm.deleteProduct(productId);
         res.json({ status: "success", deleteproduct });
     } catch (err) {
         console.error(err);

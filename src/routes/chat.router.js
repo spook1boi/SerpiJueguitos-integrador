@@ -3,56 +3,90 @@ import { messagesModel } from '../db/models/Messages.model.js';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
-    try {
-        let messages = await messagesModel.find();
-        res.json({ result: "success", payload: messages });
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Internal Server Error');
-    }
-});
-
-router.post('/messages', async (req, res) => {
+router.get('/chat', (req, res) => {
+    res.render('chat', { title: 'Chat' });
+  });
+  
+  router.post('/chat', async (req, res) => {
     const { user, message } = req.body;
+  
     if (!user || !message) {
-        res.status(400).json({ status: "error", error: "Missing body params" });
-        return;
+      return res.status(400).send('Missing user or message in the request');
     }
+  
     try {
-        const result = await messagesModel.create({ user, message });
-        res.json({ result: "success", payload: result });
+      const newMessage = await messagesModel.create({ user, message });
+      return res.status(201).json(newMessage);
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Internal Server Error');
+      console.error(error);
+      return res.status(500).send('Internal Server Error');
     }
+  });
+  
+  router.get('/chat/messages', async (req, res) => {
+    try {
+      const allMessages = await messagesModel.find();
+      return res.status(200).json(allMessages);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send('Internal Server Error');
+    }
+  });
+
+router.get('/chat/:id', async (req, res) => {
+  const messageId = req.params.id;
+
+  try {
+    const message = await messagesModel.findById(messageId);
+
+    if (!message) {
+      return res.status(404).send('Message not found');
+    }
+
+    return res.status(200).json(message);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Internal Server Error');
+  }
 });
 
-router.put('/:id_msg', async (req, res) => {
-    const { id_msg } = req.params;
-    const messagesToReplace = req.body;
-    if (!messagesToReplace.user || !messagesToReplace.message) {
-        res.status(400).json({ status: "error", error: "Missing body params" });
-        return;
+router.put('/chat/:id', async (req, res) => {
+  const messageId = req.params.id;
+  const { user, message } = req.body;
+
+  if (!user || !message) {
+    return res.status(400).send('Missing user or message in the request');
+  }
+
+  try {
+    const updatedMessage = await messagesModel.findByIdAndUpdate(messageId, { user, message }, { new: true });
+
+    if (!updatedMessage) {
+      return res.status(404).send('Message not found');
     }
-    try {
-        const result = await messagesModel.updateOne({ _id: id_msg }, messagesToReplace);
-        res.json({ result: "success", payload: result });
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Internal Server Error');
-    }
+
+    return res.status(200).json(updatedMessage);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Internal Server Error');
+  }
 });
 
-router.delete('/:id_msg', async (req, res) => {
-    const { id_msg } = req.params;
-    try {
-        const result = await messagesModel.deleteOne({ _id: id_msg });
-        res.json({ result: "success", payload: result });
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Internal Server Error');
+router.delete('/chat/:id', async (req, res) => {
+  const messageId = req.params.id;
+
+  try {
+    const deletedMessage = await messagesModel.findByIdAndRemove(messageId);
+
+    if (!deletedMessage) {
+      return res.status(404).send('Message not found');
     }
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Internal Server Error');
+  }
 });
 
 export default router;

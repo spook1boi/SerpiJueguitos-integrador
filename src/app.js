@@ -25,6 +25,11 @@ app.use("/api",ProductRouter)
 app.use("/api",CartRouter)
 app.use("/api",MessagesRouter)
 
+app.get("/", async (req, res) => {
+  const pmanager = new ProductManager();
+  const products = await pmanager.getProducts();
+  res.render("home", { products });
+});
 
 const httpServer=app.listen(PORT,()=>{
     console.log("server up ")

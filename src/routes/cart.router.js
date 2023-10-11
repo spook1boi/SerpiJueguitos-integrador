@@ -11,7 +11,7 @@ CartRouter.post("/carts", async (req, res) => {
         const { products } = req.body;
 
         if (!Array.isArray(products)) {
-            return res.status(400).send('Invalid request: products must be an array');
+            return res.status(400).json('Invalid request: products must be an array');
         }
 
         const validProducts = [];
@@ -19,50 +19,18 @@ CartRouter.post("/carts", async (req, res) => {
         for (const product of products) {
             const checkId = await pm.getProductById(product._id);
             if (!checkId) {
-                return res.status(404).send(`Product with id ${product._id} not found`);
+                return res.status(404).json(`Product with id ${product._id} not found`);
             }
             validProducts.push(checkId);
         }
 
-        const cart = await cm.addCart(validProducts);
-        res.status(200).json(cart);
+        const newCart = await cm.addCart(validProducts);
+        res.status(201).json(newCart);
 
     } catch (err) {
         console.error(err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json('Internal Server Error');
     }
-});
-
-CartRouter.post("/carts", async (req, res) => {
-  try {
-      const { products } = req.body;
-
-      if (!Array.isArray(products)) {
-          return res.status(400).send('Invalid request: products must be an array');
-      }
-
-      const validProducts = [];
-
-      for (const product of products) {
-          const checkId = await pm.getProductById(product._id);
-          if (!checkId) {
-              return res.status(404).send(`Product with id ${product._id} not found`);
-          }
-          validProducts.push(checkId);
-      }
-
-      const newCart = await cm.createCart();
-
-      for (const product of validProducts) {
-          await cm.addProductInCart(newCart._id, product);
-      }
-
-      res.status(200).json(newCart);
-
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Internal Server Error');
-  }
 });
 
 CartRouter.get("/carts", async (req, res) => {
@@ -71,7 +39,7 @@ CartRouter.get("/carts", async (req, res) => {
         res.json({ carts });
     } catch (err) {
         console.error(err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json('Internal Server Error');
     }
 });
 
@@ -84,7 +52,7 @@ CartRouter.get("/carts/:cid", async (req, res) => {
         res.json({ status: "success", carritoFound });
     } catch (err) {
         console.error(err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json('Internal Server Error');
     }
 });
 
@@ -111,8 +79,54 @@ CartRouter.post("/carts/:cid/products/:pid", async (req, res) => {
         });
     } catch (error) {
         console.error("An error occurred:", error);
-        res.status(500).send({ message: "An error occurred" });
+        res.status(500).json({ message: "An error occurred" });
     }
 });
+
+CartRouter.put("/carts/:cid", async (req, res) => {
+    const { cid } = req.params;
+    const { products } = req.body;
+  
+    try {
+      const updatedCart = await cm.updateCart(cid, products);
+      if (!updatedCart) {
+        return res.status(404).json({ message: `Cart with ID ${cid} not found` });
+      }
+      res.status(200).json({ message: "Cart updated successfully", cart: updatedCart });
+    } catch (error) {
+      console.error("An error occurred:", error);
+      res.status(500).json({ message: "An error occurred" });
+    }
+  });
+  
+  CartRouter.delete("/carts/:cid", async (req, res) => {
+    const { cid } = req.params;
+  
+    try {
+      const deletedCart = await cm.deleteCart(cid);
+      if (!deletedCart) {
+        return res.status(404).json({ message: `Cart with ID ${cid} not found` });
+      }
+      res.status(204).json({ message: "Cart deleted successfully" });
+    } catch (error) {
+      console.error("An error occurred:", error);
+      res.status(500).json({ message: "An error occurred" });
+    }
+  });
+  
+  CartRouter.delete("/carts/:cid/products/:pid", async (req, res) => {
+    const { cid, pid } = req.params;
+  
+    try {
+      const deletedProduct = await cm.deleteProductFromCart(cid, pid);
+      if (!deletedProduct) {
+        return res.status(404).json({ message: `Product with ID ${pid} not found in Cart with ID ${cid}` });
+      }
+      res.status(204).json({ message: "Product deleted successfully" });
+    } catch (error) {
+      console.error("An error occurred:", error);
+      res.status(500).json({ message: "An error occurred" });
+    }
+  });
 
 export default CartRouter;
